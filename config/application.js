@@ -16,18 +16,19 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend('application
   loadNpmTasks: [
     "grunt-angular-templates",
     "grunt-concat-sourcemap",
+    "grunt-haml",
     "grunt-ngmin"
   ],
 
   // we don't have handlebars templates or coffeescript by default
   removeTasks: {
-    common: ["concat", "handlebars", "jst"]
+    common: ["concat", "handlebars", "jst", "pages:dev", "slim"]
   },
 
   // task override configuration
   prependTasks: {
-    dist: ["ngmin"],         // ngmin should run in dist only
-    common: ["ngtemplates"] // ngtemplates runs in dist and dev
+    dist: [ "ngmin"],
+    common: ["haml", "ngtemplates"]
   },
 
   // swaps concat_sourcemap in place of vanilla concat
@@ -39,9 +40,9 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend('application
   ngtemplates: {
     app: { // "app" matches the name of the angular module defined in app.js
       options: {
-        base: "app/templates"
+        base: "templates"
       },
-      src: "app/templates/**/*.html",
+      src: "generated/templates/**/*.html",
       // puts angular templates in a different spot than lineman looks for other templates in order not to conflict with the watch process
       dest: "generated/angular/template-cache.js"
     }
@@ -52,6 +53,32 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend('application
     js: {
       src: "<%= files.js.concatenated %>",
       dest: "<%= files.js.concatenated %>"
+    }
+  },
+
+  // configuration for grunt-haml
+  haml: {
+    pages: {
+      files: [
+        {
+          expand: true,
+          cwd: "app/pages",
+          src: "**/*.haml",
+          dest: "generated/",
+          ext: ".html"
+        }
+      ]
+    },
+    templates: {
+      files: [
+        {
+          expand: true,
+          cwd: "app/templates",
+          src: "**/*.haml",
+          dest: "generated/templates",
+          ext: ".html"
+        }
+      ]
     }
   },
 
@@ -81,7 +108,7 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend('application
   // watch target concat with concat_sourcemap
   watch: {
     ngtemplates: {
-      files: "app/templates/**/*.html",
+      files: "generated/templates/**/*.html",
       tasks: ["ngtemplates", "concat_sourcemap:js"]
     },
     js: {
@@ -111,6 +138,14 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend('application
     sass: {
       files: ["<%= files.sass.vendor %>", "<%= files.sass.app %>"],
       tasks: ["sass", "concat_sourcemap:css"]
+    },
+    pages: {
+      files: ["<%= files.pages.haml %>"],
+      tasks: ["haml:pages"]
+    },
+    templates: {
+      files: ["<%= files.template.haml %>"],
+      tasks: ["haml:templates"]
     }
   }
 
