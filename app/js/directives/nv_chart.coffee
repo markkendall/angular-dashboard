@@ -1,105 +1,111 @@
 @app.directive 'nvChart', ->
   restrict: 'E'
   replace: true
+  scope: { width: '@', height: '@', data: '=model'}
 
   template: '''
     <svg>
+      <g>
+        <line class="axis"
+              ng-attr-x1="{{ xMargin }}"
+              ng-attr-y1="{{ height - yMargin }}"
+              ng-attr-x2="{{ width }}"
+              ng-attr-y2="{{ height - yMargin }}">
+        </line>
+        <line class="axis"
+              ng-attr-x1="{{ xMargin }}"
+              ng-attr-y1="0"
+              ng-attr-x2="{{ xMargin }}"
+              ng-attr-y2="{{ height - yMargin }}">
+        </line>
+        <path class="line"
+              fill="none"
+              ng-attr-d="{{ line(data) }}">
+        </path>
+        <circle class="point"
+                ng-repeat="d in data"
+                ng-attr-cx="{{ x(d) }}"
+                ng-attr-cy="{{ y(d) }}"
+                r=5>
+        </circle>
+        <line class="tick"
+              ng-repeat="d in data"
+              ng-attr-x1="{{ x(d) }}"
+              ng-attr-y1="{{ height - yMargin }}"
+              ng-attr-x2="{{ x(d) }}"
+              ng-attr-y2="{{ height - yMargin + 4 }}">
+        </line>
+        <text class="label"
+              ng-repeat="d in data"
+              ng-attr-x="{{ x(d) }}"
+              ng-attr-y="{{ height }}"
+              text-anchor="middle">
+          {{ xLabel(d) }}
+        </text>
+        <line class="tick"
+              ng-repeat="val in yIntervals"
+              ng-attr-x1="{{ xMargin }}"
+              ng-attr-y1="{{ y(val) }}"
+              ng-attr-x2="{{ xMargin - 4 }}"
+              ng-attr-y2="{{ y(val) }}">
+        </line>
+        <text class="label"
+              ng-repeat="val in yIntervals"
+              ng-attr-x="{{ xMargin - 8 }}"
+              ng-attr-y="{{ y(val) }}"
+              dy=4
+              text-anchor="end">
+          {{ yLabel(val) }}
+        </text>
+      </g>
     </svg>
   '''
 
-  link: (scope, element, attrs) ->
-    svg = d3.select(element[0]).append('g')
-    xMargin = 40
-    yMargin = 20
+  controller: ($scope, $attrs, $filter) ->
+    $scope.xMargin = 40
+    $scope.yMargin = 20
 
-    scope.$watch(
-      attrs.model
+    $scope.$watch(
+      'data'
       (data) ->
-        xVals = data.map (d) -> d[attrs.axis]
-        x = d3.time.scale().domain(d3.extent(xVals)).range([xMargin, attrs.width - xMargin])
-        y = d3.scale.linear().domain([0, 100]).range([attrs.height - yMargin, yMargin])
+        $scope.xScale = d3.time.scale()
+          .domain(d3.extent($scope.data, (d) -> d[$attrs.axis]))
+          .range([$scope.xMargin, $scope.width - $scope.xMargin])
+        d3.selectAll('.point').data(data).transition('cx', (d) -> $scope.x(d))
 
-        ## Data Points
-        points = svg.selectAll('circle').data(data, (d) -> d[attrs.axis])
-        points.enter().append('circle')
-          .attr('r', '5')
-          .style('opacity', 0)
-        points
-          .attr('cy', (d) -> y(d[attrs.yAxis]))
-          .transition().attr('cx', (d) -> x(d[attrs.axis]))
-          .transition().style('opacity', 1)
-        points.exit().remove()
+        $scope.yScale = d3.scale.linear()
+          .domain(d3.extent($scope.data, (d) -> d[$attrs.yAxis]))
+          .range([$scope.height - $scope.yMargin, $scope.yMargin])
 
-        ## X Axis
-        xAxis = svg.selectAll(".xAxis").data(['x'])
-        xAxis.enter().append("svg:line")
-          .attr("class", "xAxis")
-          .attr("y1", y(0))
-          .attr("y2", y(0))
-          .attr("x1", xMargin)
-          .attr("x2", attrs.width)
-          .attr("stroke", "black")
-
-        ## X Axis Ticks
-        xTicks = svg.selectAll(".xTick").data(data, (d) -> d[attrs.axis])
-        xTicks.enter().append("svg:line")
-          .attr("class", "xTick")
-          .attr("y1", y(0) + 4)
-          .attr("y2", y(0))
-          .attr("stroke", "black")
-          .style('opacity', 0)
-        xTicks
-          .transition().attr("x1", (d) -> x(d[attrs.axis])).attr("x2", (d) -> x(d[attrs.axis]))
-          .transition().style('opacity', 1)
-        xTicks.exit().remove()
-
-        ## X Axis Labels
-        xLabels = svg.selectAll(".xLabel").data(data, (d) -> d[attrs.axis])
-        xLabels.enter().append("svg:text")
-          .attr("class", "xLabel")
-          .text((d) ->
-            time = d[attrs.axis]
-            "#{time.getHours()}:#{time.getMinutes()}:#{time.getSeconds()}"
-          )
-          .attr("y", attrs.height)
-          .attr("text-anchor", "middle")
-          .style('opacity', 0)
-        xLabels
-          .transition().attr("x", (d) -> x(d[attrs.axis]))
-          .transition().style('opacity', 1)
-        xLabels.exit().remove()
-
-        ## Y Axis
-        yAxis = svg.selectAll(".yAxis").data(['y'])
-        yAxis.enter().append("svg:line")
-          .attr("class", "yAxis")
-          .attr("x1", xMargin)
-          .attr("x2", xMargin)
-          .attr("y1", 0)
-          .attr("y2", attrs.height - yMargin)
-          .attr("stroke", "black")
-
-        ## Y Axis Ticks
-        yTicks = svg.selectAll(".yTick").data(y.ticks(10))
-        yTicks.enter().append("svg:line")
-          .attr("class", "yTick")
-          .attr("x1", xMargin - 4)
-          .attr("x2", xMargin)
-          .attr("stroke", "black")
-        yTicks
-          .attr("y1", (d) -> y(d))
-          .attr("y2", (d) -> y(d))
-
-        ## Y Axis Labels
-        yLabels = svg.selectAll(".yLabel").data(y.ticks(10))
-        yLabels.enter().append("svg:text")
-          .attr("class", "yLabel")
-          .text(String)
-          .attr("x", 0)
-          .attr("text-anchor", "right")
-          .attr("dy", 4)
-        yLabels
-          .attr("y", (d) -> y(d))
-
+        [min, max] = d3.extent($scope.data, (d) -> d[$attrs.yAxis])
+        $scope.yIntervals = d3.range(min, max, ((max - min) / 10)).map (val) ->
+          obj = {}
+          obj[$attrs.yAxis] = Math.floor(val)
+          obj
       true
     )
+
+    $scope.x = (d) ->
+      $scope.xScale(d[$attrs.axis])
+
+    $scope.xLabel = (d) ->
+      val = d[$attrs.axis]
+      if angular.isDate(val)
+        $filter('date')(val, 'H:mm:ss')
+      else
+        val.toString()
+
+    $scope.y = (d) ->
+      $scope.yScale(d[$attrs.yAxis])
+
+    $scope.yLabel = (d) ->
+      val = d[$attrs.yAxis]
+      val.toString()
+
+    $scope.line = (data) ->
+      return "M0 0" unless data.length
+      line = d3.svg.line()
+        .x($scope.x)
+        .y($scope.y)
+        .interpolate('linear')
+      line(data)
