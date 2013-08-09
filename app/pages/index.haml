@@ -11,7 +11,7 @@
   %body(ng-app="app")
     %h1 Angular Dashboard
 
-    .well(nv-remote-data="cpu" url="/cpu.json")
+    .well(nv-remote-data="cpu" url="/cpu.json" interval=5000)
       %nv-chart(model="cpu" x-axis="time" y-axis="usage" width="900" height="400")
 
     %script(src="js/app.js")

@@ -11,15 +11,28 @@
 # defining a spec based on the needs of the client code that emerge.
 
 
+cpu = []
+
+generateCpuValue = (now) ->
+  time = new Date(now)
+  time.setSeconds(0)
+  time.setMilliseconds(0)
+  console.log "\nCompare"
+  console.log time
+  console.log cpu[cpu.length - 1]?.time
+  unless cpu[cpu.length - 1]?.time.toString() == time.toString()
+    console.log "   adding"
+    cpu.push { time: time, usage: Math.floor(Math.random() * 101) }
+  cpu.shift() if cpu.length > 10
+
+for i in [10..1]
+  now = new Date()
+  now.setMinutes(now.getMinutes() - i)
+  generateCpuValue(now)
 
 module.exports = {
   drawRoutes: (app) ->
     app.get '/cpu.json', (req, res) ->
-      result = []
-      now = new Date()
-      for i in [1..10]
-        time = new Date(now)
-        time.setDate(time.getDate() + i)
-        result.push { time: time, usage: Math.floor(Math.random() * 101) }
-      res.json result
+      generateCpuValue(new Date())
+      res.json cpu
 }
