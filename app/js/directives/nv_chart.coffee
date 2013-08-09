@@ -7,7 +7,7 @@
     chart = D3.timeSeriesChart()
       .width(attrs.width)
       .height(attrs.height)
-      .x((d) -> d[attrs.axis])
+      .x((d) -> new Date(d[attrs.axis]))
       .y((d) -> +d[attrs.yAxis])
 
     scope.$watch(
